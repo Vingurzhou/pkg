@@ -9,7 +9,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
-func TestNewRedisCl(t *testing.T) {
+func TestNewRedisCli(t *testing.T) {
 	ctx := context.Background()
 	err := godotenv.Load()
 	if err != nil {
