@@ -10,9 +10,9 @@ import (
 type GormConfig struct {
 }
 
-func NewGormDB(dsn string, g GormConfig) *gorm.DB {
+func NewGormDB(dsn string) *gorm.DB {
 	gormDialector := mysql.Open(dsn)
-	gormDb, err := gorm.Open(gormDialector, &gorm.Config{})
+	gormDb, err := gorm.Open(gormDialector)
 	if err != nil {
 		fmt.Println(err)
 	}
