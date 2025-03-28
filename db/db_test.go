@@ -12,7 +12,7 @@ func TestNewGormDB(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	gormDB := NewGormDB(os.Getenv("DSN"), GormConfig{})
+	gormDB := NewGormDB(os.Getenv("DSN"))
 	db, err := gormDB.DB()
 	if err != nil {
 		t.Fatal(err)
