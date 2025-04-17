@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/joho/godotenv"
+	"gorm.io/driver/mysql"
 )
 
 func TestNewGormDB(t *testing.T) {
@@ -12,7 +13,7 @@ func TestNewGormDB(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	gormDB := NewGormDB(os.Getenv("DSN"))
+	gormDB := NewGormDB(mysql.Open(os.Getenv("DSN")))
 	db, err := gormDB.DB()
 	if err != nil {
 		t.Fatal(err)
