@@ -4,6 +4,8 @@ import (
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/Vingurzhou/pkg/errorsz"
 )
 
 type WrapperHttpCli struct {
@@ -17,6 +19,12 @@ func NewHttpCli() *WrapperHttpCli {
 }
 
 func (c *WrapperHttpCli) Do(url, method, payLoadStr string, headerMap map[string]string) ([]byte, error) {
+	switch method {
+	case "POST":
+	case "GET":
+	default:
+		return nil, errorsz.ErrInvalidMethod
+	}
 	req, err := http.NewRequest(method, url, strings.NewReader(payLoadStr))
 	if err != nil {
 		return nil, err
