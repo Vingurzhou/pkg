@@ -21,6 +21,9 @@ func (c *WrapperHttpCli) Do(url, method, payLoadStr string, headerMap map[string
 	if err != nil {
 		return nil, err
 	}
+	for k, v := range headerMap {
+		req.Header.Add(k, v)
+	}
 	res, err := c.httpCli.Do(req)
 	if err != nil {
 		return nil, err
