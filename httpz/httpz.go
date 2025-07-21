@@ -1,11 +1,10 @@
 package httpz
 
 import (
+	"errors"
 	"io"
 	"net/http"
 	"strings"
-
-	"github.com/Vingurzhou/pkg/errorsz"
 )
 
 type WrapperHttpCli struct {
@@ -23,7 +22,7 @@ func (c *WrapperHttpCli) Do(url, method, payLoadStr string, headerMap map[string
 	case "POST":
 	case "GET":
 	default:
-		return nil, errorsz.ErrInvalidMethod
+		return nil, errors.New("不支持的方法")
 	}
 	req, err := http.NewRequest(method, url, strings.NewReader(payLoadStr))
 	if err != nil {

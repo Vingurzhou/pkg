@@ -10,7 +10,9 @@ type GormConfig struct {
 }
 
 func NewGormDB(dialector gorm.Dialector) *gorm.DB {
-	gormDb, err := gorm.Open(dialector)
+	gormDb, err := gorm.Open(dialector, &gorm.Config{
+		TranslateError: true,
+	})
 	if err != nil {
 		fmt.Println(err)
 	}

@@ -5,9 +5,8 @@ import (
 	"testing"
 
 	"github.com/joho/godotenv"
-	"gorm.io/driver/sqlite"
 	// "gorm.io/driver/sqlite"
-	// "gorm.io/driver/mysql"
+	"gorm.io/driver/mysql"
 )
 
 func TestNewGormDB(t *testing.T) {
@@ -15,7 +14,8 @@ func TestNewGormDB(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	gormDB := NewGormDB(sqlite.Open(os.Getenv("DSN")))
+	// gormDB := NewGormDB(sqlite.Open(os.Getenv("DSN")))
+	gormDB := NewGormDB(mysql.Open(os.Getenv("DSN")))
 	db, err := gormDB.DB()
 	if err != nil {
 		t.Fatal(err)
