@@ -1,18 +1,34 @@
 package util
 
-import (
-	"fmt"
-	"testing"
-)
+import "testing"
 
-func TestContains(t *testing.T) {
-	// 测试字符串
-	strs := []string{"go", "java", "python"}
-	fmt.Println(Contains(strs, "go"))     // true
-	fmt.Println(Contains(strs, "golang")) // false
-
-	// 测试整数
-	ints := []int{1, 2, 3, 4}
-	fmt.Println(Contains(ints, 3)) // true
-	fmt.Println(Contains(ints, 5)) // false
+func TestContainsString(t *testing.T) {
+	type args struct {
+		slice []string
+		str   string
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{struct {
+		name string
+		args args
+		want bool
+	}{
+		name: "",
+		args: args{
+			slice: []string{"1", "2"},
+			str:   "1",
+		},
+		want: true,
+	},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ContainsString(tt.args.slice, tt.args.str); got != tt.want {
+				t.Errorf("ContainsString() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

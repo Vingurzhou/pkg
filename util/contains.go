@@ -1,9 +1,8 @@
 package util
 
-// 泛型 contains 函数，适用于任何可比较类型
-func Contains[T comparable](slice []T, item T) bool {
+func ContainsString(slice []string, str string) bool {
 	for _, v := range slice {
-		if v == item {
+		if v == str {
 			return true
 		}
 	}
