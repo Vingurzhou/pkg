@@ -1,7 +1,7 @@
 package httpz
 
 import (
-	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -19,10 +19,12 @@ func NewHttpCli() *WrapperHttpCli {
 
 func (c *WrapperHttpCli) Do(url, method, payLoadStr string, headerMap map[string]string) ([]byte, error) {
 	switch method {
-	case "POST":
-	case "GET":
+	case http.MethodGet:
+	case http.MethodPost:
+	case http.MethodPut:
+	case http.MethodDelete:
 	default:
-		return nil, errors.New("不支持的方法")
+		return nil, fmt.Errorf("不支持的方法:%s", method)
 	}
 	req, err := http.NewRequest(method, url, strings.NewReader(payLoadStr))
 	if err != nil {
