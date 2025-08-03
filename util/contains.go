@@ -8,3 +8,12 @@ func ContainsString(slice []string, str string) bool {
 	}
 	return false
 }
+
+func ContainsInt(slice []int, num int) bool {
+	for _, v := range slice {
+		if v == num {
+			return true
+		}
+	}
+	return false
+}
