@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"time"
 )
 
 type WrapperHttpCli struct {
@@ -14,9 +13,7 @@ type WrapperHttpCli struct {
 
 func NewHttpCli() *WrapperHttpCli {
 	return &WrapperHttpCli{
-		httpCli: &http.Client{
-			Timeout: 3 * time.Second,
-		},
+		httpCli: &http.Client{},
 	}
 }
 
