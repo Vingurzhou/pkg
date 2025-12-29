@@ -16,6 +16,7 @@ type BloomFilter struct {
 	hashes int           // 哈希函数数量，多哈希函数降低误判率
 }
 
+// 尽量选 大质数（素数）（如 10007、100003）
 func NewBloomFilter(client *redis.Client, key string, errorRate float64, capacity int) *BloomFilter {
 	m := -float64(capacity) * math.Log(errorRate) / (math.Ln2 * math.Ln2) //m = -(n * ln(p)) / (ln2)^2
 	k := (m / float64(capacity)) * math.Ln2                               //k = (m/n) * ln2
