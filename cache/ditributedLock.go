@@ -2,53 +2,88 @@ package cache
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/redis/go-redis/v9"
 )
 
+// TODO
+type RedLock struct {
+	clientList []*redis.Client //实例，非集群
+}
 type DistributedLock struct {
-	client     *redis.Client
-	lockKey    string
-	lockValue  string // 唯一标识，通常使用随机值
-	expiration time.Duration
+	client          *redis.Client //redis客户端
+	lockKey         string        //锁
+	lockValue       string        //钥匙持有者
+	redisExpiration int           //自动解锁时间，防止解锁失败死锁,纳秒
+	goExpiration    time.Duration //自动解锁时间，防止解锁失败死锁,毫秒
 }
 
-// NewDistributedLock 创建新的分布式锁实例
-func NewDistributedLock(client *redis.Client, key string, expiration time.Duration) *DistributedLock {
+func NewDistributedLock(client *redis.Client, key string, value string, expiration time.Duration) *DistributedLock {
 	return &DistributedLock{
-		client:     client,
-		lockKey:    key,
-		lockValue:  fmt.Sprintf("%d", time.Now().UnixNano()), // 生成唯一值
-		expiration: expiration,
+		client:          client,
+		lockKey:         key,
+		lockValue:       value,
+		goExpiration:    expiration,
+		redisExpiration: int(expiration / time.Millisecond),
 	}
 }
 
-// TryLock 尝试获取锁
-func (dl *DistributedLock) TryLock(ctx context.Context) (bool, error) {
-	// 使用 SETNX 命令，只有当 key 不存在时才设置成功
-	success, err := dl.client.SetNX(ctx, dl.lockKey, dl.lockValue, dl.expiration).Result()
-	if err != nil {
-		return false, err
-	}
-	return success, nil
-}
-
-// Unlock 释放锁
-func (dl *DistributedLock) Unlock(ctx context.Context) (bool, error) {
-	// 使用 Lua 脚本确保只有持有锁的客户端才能释放锁
+func (dl *DistributedLock) TryLock(ctx context.Context) error {
 	script := `
-        if redis.call("get", KEYS[1]) == ARGV[1] then
-            return redis.call("del", KEYS[1])
-        else
-            return 0
-        end
+if redis.call("SET", KEYS[1], ARGV[1], "NX", "PX", ARGV[2]) then
+	return 1
+else
+	error(string.format("%s 已经上锁", KEYS[1]))
+end
     `
 
-	result, err := dl.client.Eval(ctx, script, []string{dl.lockKey}, dl.lockValue).Int64()
+	err := dl.client.Eval(ctx, script, []string{dl.lockKey}, dl.lockValue, dl.redisExpiration).Err()
 	if err != nil {
-		return false, err
+		return err
 	}
-	return result == 1, nil
+	go dl.watchDog(ctx)
+	return nil
+}
+
+// 看门狗续锁，防止自动解锁<手动解锁时间
+func (dl *DistributedLock) watchDog(ctx context.Context) {
+	ticker := time.NewTicker(dl.goExpiration / 3)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			script := `
+if redis.call('get', KEYS[1]) == ARGV[1] then
+	redis.call("PEXPIRE", KEYS[1], ARGV[2])
+	return 1
+else
+	error(string.format("%s 没上锁或 %s 非钥匙持有者", KEYS[1],ARGV[1]))
+end
+    			`
+			err := dl.client.Eval(ctx, script, []string{dl.lockKey}, dl.lockValue, dl.redisExpiration).Err()
+			if err != nil {
+				continue
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+func (dl *DistributedLock) Unlock(ctx context.Context) error {
+	script := `
+if redis.call('get', KEYS[1]) == ARGV[1] then
+    redis.call('del', KEYS[1])
+    return 1
+else
+	error(string.format("%s 没上锁或 %s 非钥匙持有者", KEYS[1],ARGV[1]))
+end
+    `
+	err := dl.client.Eval(ctx, script, []string{dl.lockKey}, dl.lockValue).Err()
+	if err != nil {
+		return err
+	}
+	return nil
 }

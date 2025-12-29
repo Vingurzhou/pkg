@@ -2,48 +2,62 @@ package cache
 
 import (
 	"context"
+	"fmt"
+	"hash/fnv"
+	"math"
 
 	"github.com/redis/go-redis/v9"
 )
 
-// BloomFilter 结构体
 type BloomFilter struct {
-	client    *redis.Client
-	key       string
-	size      int64
-	errorRate float64
+	client *redis.Client // Redis 客户端
+	key    string        // 集合
+	size   int64         // 最大数量
+	hashes int           // 哈希函数数量，多哈希函数降低误判率
 }
 
-// NewBloomFilter 创建新的布隆过滤器
-func NewBloomFilter(client *redis.Client, key string, size int64, errorRate float64) *BloomFilter {
+func NewBloomFilter(client *redis.Client, key string, errorRate float64, capacity int) *BloomFilter {
+	m := -float64(capacity) * math.Log(errorRate) / (math.Ln2 * math.Ln2) //m = -(n * ln(p)) / (ln2)^2
+	k := (m / float64(capacity)) * math.Ln2                               //k = (m/n) * ln2
+	hashes := int(math.Ceil(k))
 	return &BloomFilter{
-		client:    client,
-		key:       key,
-		size:      size,
-		errorRate: errorRate,
+		client: client,
+		key:    key,
+		size:   int64(math.Ceil(m)),
+		hashes: hashes,
 	}
 }
 
-// Add 添加元素到布隆过滤器
 func (bf *BloomFilter) Add(ctx context.Context, value string) error {
-	// BF.ADD 命令添加单个元素
-	cmd := bf.client.BFAdd(ctx, bf.key, value)
-	return cmd.Err()
-}
-
-// Exists 检查元素是否存在
-func (bf *BloomFilter) Exists(ctx context.Context, value string) (bool, error) {
-	// BF.EXISTS 命令检查元素是否存在
-	cmd := bf.client.BFExists(ctx, bf.key, value)
-	if err := cmd.Err(); err != nil {
-		return false, err
+	// TODO 使用 Redis Lua 脚本减少网络开销
+	for i := 0; i < bf.hashes; i++ {
+		idx := bf.hashIndex(value, i)
+		if err := bf.client.SetBit(ctx, bf.key, idx, 1).Err(); err != nil {
+			return err
+		}
 	}
-	return cmd.Val(), nil
+	return nil
 }
 
-// Init 初始化布隆过滤器（可选）
-func (bf *BloomFilter) Init(ctx context.Context) error {
-	// BF.RESERVE 创建具有指定参数的布隆过滤器
-	cmd := bf.client.BFReserve(ctx, bf.key, bf.errorRate, bf.size)
-	return cmd.Err()
+func (bf *BloomFilter) Exists(ctx context.Context, value string) error {
+	for i := 0; i < bf.hashes; i++ {
+		idx := bf.hashIndex(value, i)
+		//领取->领取
+		//未领取->未领取/领取
+		bit, err := bf.client.GetBit(ctx, bf.key, idx).Result()
+		if err != nil {
+			return err
+		}
+		if bit == 0 {
+			err := fmt.Errorf("元素不存在")
+			return err
+		}
+	}
+	return nil
+}
+func (bf *BloomFilter) hashIndex(value string, i int) int64 {
+	h := fnv.New64a()
+	h.Write([]byte(value))
+	h.Write([]byte{byte(i)})
+	return int64(h.Sum64() % uint64(bf.size))
 }
