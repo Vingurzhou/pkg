@@ -3,46 +3,37 @@ package cache
 import (
 	"context"
 	"os"
-	"strconv"
 	"testing"
 	"time"
 
-	"github.com/joho/godotenv"
 	"github.com/redis/go-redis/v9"
 )
 
 var (
-	ctx      context.Context
-	redisCli *redis.Client
+	ctx             context.Context
+	redisCli        *redis.Client
+	redisClusterCli *redis.ClusterClient
 )
 
 func TestMain(m *testing.M) {
 	ctx = context.Background()
 
-	if err := godotenv.Load(); err != nil {
-		panic(err)
-	}
-
-	db, err := strconv.ParseInt(os.Getenv("DB"), 10, 64)
-	if err != nil {
-		panic(err)
-	}
-
 	redisCli = NewRedisCli(RedisOptions{
-		Addr:     os.Getenv("Addr"),
-		Password: os.Getenv("Password"),
-		DB:       int(db),
+		Addr: "127.0.0.1:7001",
 	})
-
+	redisClusterCli = NewRedisClusterCli(RedisClusterOptions{
+		Addrs: []string{
+			"127.0.0.1:7001",
+			"127.0.0.1:7002",
+			"127.0.0.1:7003",
+		},
+	})
 	code := m.Run()
 
 	os.Exit(code)
 }
 func TestNewRedisCli(t *testing.T) {
-	for _, v := range redisCli.Keys(ctx, "*").Val() {
-		t.Log(v)
-	}
-
+	t.Log(redisCli.Ping(ctx))
 }
 
 func TestDistributedLock(t *testing.T) {
@@ -85,4 +76,23 @@ func TestTokenBucket(t *testing.T) {
 	t.Log(stock.Decrease(ctx, 3))
 	time.Sleep(time.Second)
 	t.Log(stock.Decrease(ctx, 3))
+}
+
+func TestNewRedisClusterCli(t *testing.T) {
+	slots, err := redisClusterCli.ClusterSlots(ctx).Result()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, slot := range slots {
+		t.Log(slot)
+	}
+	t.Log(redisClusterCli.Set(ctx, "1{packet}", "1", 3*time.Second))
+	t.Log(redisClusterCli.Set(ctx, "2{packet}", "2", 3*time.Second))
+	t.Log(redisClusterCli.Set(ctx, "3{packet2}", "3", 3*time.Second))
+	t.Log(redisClusterCli.Get(ctx, "1{packet}"))
+	t.Log(redisClusterCli.Get(ctx, "2{packet}"))
+	t.Log(redisClusterCli.Get(ctx, "3{packet2}"))
+	t.Log(redisClusterCli.ClusterKeySlot(ctx, "1{packet}"))
+	t.Log(redisClusterCli.ClusterKeySlot(ctx, "2{packet}"))
+	t.Log(redisClusterCli.ClusterKeySlot(ctx, "3{packet2}"))
 }
