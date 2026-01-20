@@ -19,12 +19,12 @@ func TestNewSaramCli(t *testing.T) {
 	}
 	tlsEnabled, _ := strconv.ParseBool(os.Getenv("TLSEnabled"))
 	saramaCli, err := NewSaramCli(SaramaConfig{
-		Brokers:    os.Getenv("Brokers"),
-		Username:   os.Getenv("Username"),
-		Password:   os.Getenv("Password"),
+		Brokers:    "221.214.51.164:19092",
+		Username:   "microsate",
+		Password:   "microsate_pass",
 		TLSEnabled: tlsEnabled,
-		Algorithm:  os.Getenv("Algorithm"),
-		Assignor:   os.Getenv("Assignor"),
+		Algorithm:  "sha256",
+		Assignor:   "range",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -74,4 +74,34 @@ func (h exampleConsumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSe
 		fmt.Println(msgValue["requestId"])
 	}
 	return nil
+}
+
+func TestCommunity(t *testing.T) {
+	config := sarama.NewConfig()
+	config.Version = sarama.V3_6_0_0
+
+	client, err := sarama.NewClient([]string{"localhost:9092"}, config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+
+	t.Log(client.Brokers())
+	producer, err := sarama.NewAsyncProducerFromClient(client)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	producer.Input() <- &sarama.ProducerMessage{
+		Topic: "test-topic",
+		Key:   sarama.StringEncoder("key1"), // 可选
+		Value: sarama.StringEncoder("hello kafka"),
+	}
+
+	consumer, err := sarama.NewConsumerFromClient(client)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(consumer.Partitions("test-topic"))
+	t.Log(consumer.ConsumePartition("test-topic", 0, sarama.OffsetOldest))
 }
