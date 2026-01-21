@@ -5,15 +5,21 @@
 - [pkg](#pkg)
   - [Table of Contents](#table-of-contents)
   - [About ](#about-)
+    - [加扰](#加扰)
+    - [基于 TLE 的卫星轨道递推方法（SGP4）](#基于-tle-的卫星轨道递推方法sgp4)
   - [Getting Started ](#getting-started-)
     - [Installing](#installing)
   - [Usage ](#usage-)
-  - [satellites](#satellites)
-    - [开普勒第三定律推导](#开普勒第三定律推导)
 
 ## About <a name = "about"></a>
 
 基于Golang的软件包
+
+### 加扰
+
+### 基于 TLE 的卫星轨道递推方法（SGP4）
+
+用 SGP4 得到 r / v → 反算瞬时六根数（振荡根数）
 
 ## Getting Started <a name = "getting_started"></a>
 
@@ -30,13 +36,3 @@ import "github.com/Vingurzhou/pkg/db"
 
 db.NewGormDB(mysql.open())
 ```
-
-## satellites
-
-<https://gitcode.com/open-source-toolkit/ac324>
-
-### 开普勒第三定律推导
-
-{
-$a=\left(\frac{\mu T^2}{4\pi^2}\right)^{1/3}$
-}
