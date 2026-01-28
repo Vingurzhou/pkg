@@ -5,15 +5,19 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 )
 
+type Config struct {
+	Timeout time.Duration
+}
 type WrapperHttpCli struct {
 	httpCli *http.Client
 }
 
-func NewHttpCli() *WrapperHttpCli {
+func NewHttpCli(config Config) *WrapperHttpCli {
 	return &WrapperHttpCli{
-		httpCli: &http.Client{},
+		httpCli: &http.Client{Timeout: config.Timeout},
 	}
 }
 
